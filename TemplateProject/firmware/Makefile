@@ -17,13 +17,41 @@
 DEVICE     = atmega644
 CLOCK      = 20000
 PROGRAMMER = -c avrispmkII -P usb
-OBJECTS    = $(OBJ)
 SRC =  $(wildcard *.c)
 OBJDIR = .
 OBJ = $(SRC:%.c=$(OBJDIR)/%.o)
 LST = $(SRC:%.c=$(OBJDIR)/%.lst)
 FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
-$(info $(SRCS))
+
+## Options common to compile, link and assembly rules
+COMMON = -mmcu=$(DEVICE)
+
+## Compile options common for all C compilation units.
+CFLAGS = $(COMMON)
+CFLAGS += -Wall -gdwarf-2                                                                                                                                                  -DF_CPU=20000000UL -O2 -fsigned-char -std=gnu99
+CFLAGS += -MD -MP -MT $(*F).o -MF $(@F).d 
+
+## Assembly specific flags
+ASMFLAGS = $(COMMON)
+ASMFLAGS += $(CFLAGS)
+ASMFLAGS += -x assembler-with-cpp -Wa,-gdwarf2
+
+## Linker flags
+LDFLAGS = $(COMMON)
+LDFLAGS += 
+
+
+## Intel Hex file production flags
+HEX_FLASH_FLAGS = -R .eeprom -R .fuse -R .lock -R .signature
+
+HEX_EEPROM_FLAGS = -j .eeprom
+HEX_EEPROM_FLAGS += --set-section-flags=.eeprom="alloc,load"
+HEX_EEPROM_FLAGS += --change-section-lma .eeprom=0 --no-change-warnings
+
+
+## Objects that must be built in order to link
+OBJECTS = $(OBJ)
+
 
 # AVR fuse calculator
 # http://www.engbedded.com/fusecalc/
@@ -31,7 +59,7 @@ $(info $(SRCS))
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE)
-COMPILE = avr-gcc -Wall -std=gnu99 -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+COMPILE = avr-gcc $(CFLAGS)
 
 # symbolic targets:
 all:	clean main.hex
